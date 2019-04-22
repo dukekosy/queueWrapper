@@ -1,6 +1,6 @@
 package org.subcriber;
 
-public interface Subscribe {
+public interface Subscriber {
 
     void handle();
 
