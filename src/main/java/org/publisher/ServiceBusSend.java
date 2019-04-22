@@ -9,46 +9,37 @@ import com.microsoft.azure.servicebus.primitives.ServiceBusException;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
-public class ServiceBusSend implements Publisher{
+public class ServiceBusSend implements Publisher {
+
+    private static final Gson gson = new Gson();
 
     public void publish(String queueName, String json) throws ServiceBusException, InterruptedException {
         TopicClient sendClient;
         String connectionString = "Endpoint=sb://<NameOfServiceBusNamespace>.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=<AccessKey>";
-        sendClient = new TopicClient(new ConnectionStringBuilder(connectionString, "BasicTopic"));
-        sendMessagesAsync(sendClient).thenRunAsync(() -> sendClient.closeAsync());
+        sendClient = new TopicClient(new ConnectionStringBuilder(connectionString, queueName));
+        sendMessagesAsync(sendClient, json).thenRunAsync(() -> sendClient.closeAsync());
     }
 
     public void publishDelayed(String queueName, String json, long delay) {
 
     }
 
-    static CompletableFuture<Void> sendMessagesAsync(TopicClient sendClient) {
+    static CompletableFuture<Void> sendMessagesAsync(TopicClient sendClient, String json) {
         List<HashMap<String, String>> data =
-                Gson.fromJson(
-                        "[" +
-                                "{'name' = 'Einstein', 'firstName' = 'Albert'}," +
-                                "{'name' = 'Heisenberg', 'firstName' = 'Werner'}," +
-                                "{'name' = 'Curie', 'firstName' = 'Marie'}," +
-                                "{'name' = 'Hawking', 'firstName' = 'Steven'}," +
-                                "{'name' = 'Newton', 'firstName' = 'Isaac'}," +
-                                "{'name' = 'Bohr', 'firstName' = 'Niels'}," +
-                                "{'name' = 'Faraday', 'firstName' = 'Michael'}," +
-                                "{'name' = 'Galilei', 'firstName' = 'Galileo'}," +
-                                "{'name' = 'Kepler', 'firstName' = 'Johannes'}," +
-                                "{'name' = 'Kopernikus', 'firstName' = 'Nikolaus'}" +
-                                "]",
+                gson.fromJson(json,
                         new TypeToken<List<HashMap<String, String>>>() {
                         }.getType());
 
         List<CompletableFuture> tasks = new ArrayList<>();
         for (int i = 0; i < data.size(); i++) {
             final String messageId = Integer.toString(i);
-            Message message = new Message(Gson.toJson(data.get(i), Map.class).getBytes(StandardCharsets.UTF_8));
+            Message message = new Message(gson.toJson(data.get(i), Map.class).getBytes(StandardCharsets.UTF_8));
             message.setContentType("application/json");
             message.setLabel("Scientist");
             message.setMessageId(messageId);
